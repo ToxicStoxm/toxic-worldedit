@@ -4,3 +4,6 @@ main: com.x_tornado10.craftattack.craftattack
 api-version: '1.20'
 prefix: "cs-ca"
 authors: [x_Tornado10]
+commands:
+  save:
+    usage: /save <coordinates> <coordinates>
