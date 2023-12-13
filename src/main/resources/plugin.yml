@@ -5,5 +5,9 @@ api-version: '1.20'
 prefix: "cs-ca"
 authors: [x_Tornado10]
 commands:
-  save:
-    usage: /save <coordinates> <coordinates>
+  new:
+    usage: /new <coordinates> <coordinates>
+  read:
+    usage: /new-area <name> <coordinates> <coordinates>
+  load:
+    usage: /load <coordinates>

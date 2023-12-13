@@ -1,7 +1,7 @@
-package com.x_tornado10.craftattack.commands.save;
+package com.x_tornado10.craftattack.commands.newarea;
 
-import com.x_tornado10.craftattack.area.Area;
-import com.x_tornado10.craftattack.area.AreaStorage;
+import com.x_tornado10.craftattack.areaBoundingBox.AreaBoundingBox;
+import com.x_tornado10.craftattack.areaBoundingBox.AreaBoundingBoxStorage;
 import com.x_tornado10.craftattack.craftattack;
 import com.x_tornado10.craftattack.plmsg.PlayerMessages;
 import com.x_tornado10.craftattack.utils.statics.Paths;
@@ -19,17 +19,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
-public class SaveCommand implements CommandExecutor {
+public class NewAreaCommand implements CommandExecutor {
 
     private final craftattack plugin;
     private final Logger logger;
     private final PlayerMessages plmsg;
-    private final AreaStorage areaStorage;
-    public SaveCommand() {
+    private final AreaBoundingBoxStorage areaBoundingBoxStorage;
+    public NewAreaCommand() {
         plugin = craftattack.getInstance();
         logger = plugin.getLogger();
         plmsg = plugin.getPlmsg();
-        areaStorage = new AreaStorage();
+        areaBoundingBoxStorage = new AreaBoundingBoxStorage();
     }
 
     @Override
@@ -42,7 +42,7 @@ public class SaveCommand implements CommandExecutor {
                     return true;
                 }
                 try {
-                    areaStorage.saveArea(new Area(locs.get(0), locs.get(1), args[6]), Paths.areaSaveFile, args.length == 8 && Boolean.parseBoolean(args[7]));
+                    areaBoundingBoxStorage.saveArea(new AreaBoundingBox(locs.get(0), locs.get(1), args[6]), Paths.areaSaveFile, args.length == 8 && Boolean.parseBoolean(args[7]));
                 } catch (IOException | InvalidConfigurationException e) {
                     plmsg.msg(p, ChatColor.RED + "Something went wrong wile saving, please make sure you provided valid arguments!");
                     return true;
@@ -63,17 +63,15 @@ public class SaveCommand implements CommandExecutor {
         for (String s : temp) {
             int current = temp.indexOf(s);
             if (s.contains("~")) {
+                String replacement = null;
                 if (s.equals("~")) {
-                    String replacement = null;
                     Location loc = p.getLocation();
                     switch (current) {
                         case 0, 3 -> replacement = String.valueOf(loc.getX());
                         case 1, 4 -> replacement = String.valueOf(loc.getY());
                         case 2, 5 -> replacement = String.valueOf(loc.getZ());
                     }
-                    temp.set(current, replacement);
                 } else {
-                    String replacement = null;
                     String modifier = s.replace("~","");
                     Location loc = p.getLocation();
                     switch (current) {
@@ -81,8 +79,8 @@ public class SaveCommand implements CommandExecutor {
                         case 1, 4 -> replacement = String.valueOf(loc.getY() + Double.parseDouble(modifier));
                         case 2, 5 -> replacement = String.valueOf(loc.getZ() + Double.parseDouble(modifier));
                     }
-                    temp.set(current, replacement);
                 }
+                temp.set(current, replacement);
             }
         }
         try {

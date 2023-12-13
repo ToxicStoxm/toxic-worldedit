@@ -1,4 +1,4 @@
-package com.x_tornado10.craftattack.commands.save;
+package com.x_tornado10.craftattack.commands.newarea;
 
 import org.bukkit.Location;
 import org.bukkit.command.Command;
@@ -10,7 +10,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SaveCommandTabCompletion implements TabCompleter {
+public class NewAreaCommandTabCompletion implements TabCompleter {
     @Override
     public List<String> onTabComplete(@NonNull CommandSender commandSender,@NonNull Command command,@NonNull String s, @NonNull String[] args) {
         if (!(commandSender instanceof Player p)) return null;

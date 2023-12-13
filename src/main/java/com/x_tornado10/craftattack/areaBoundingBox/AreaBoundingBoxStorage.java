@@ -1,4 +1,4 @@
-package com.x_tornado10.craftattack.area;
+package com.x_tornado10.craftattack.areaBoundingBox;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -11,14 +11,14 @@ import java.io.*;
 import java.util.Set;
 import java.util.UUID;
 
-public class AreaStorage {
-    public boolean saveArea(Area area, String fileName, boolean overwrite) throws IOException, InvalidConfigurationException {
+public class AreaBoundingBoxStorage {
+    public boolean saveArea(AreaBoundingBox areaBoundingBox, String fileName, boolean overwrite) throws IOException, InvalidConfigurationException {
         YamlConfiguration areas = new YamlConfiguration();
         areas.load(fileName);
         Set<String> s = areas.getKeys(false);
-        if (s.contains(area.getName())) if (!overwrite) return false;
-        Location loc1 = area.getCorner1();
-        Location loc2 = area.getCorner2();
+        if (s.contains(areaBoundingBox.getName())) if (!overwrite) return false;
+        Location loc1 = areaBoundingBox.getCorner1();
+        Location loc2 = areaBoundingBox.getCorner2();
         Block b1 = loc1.getBlock();
         Block b2 = loc2.getBlock();
         String sep = "$";
@@ -27,13 +27,13 @@ public class AreaStorage {
         if (w1 == null || w2 == null) return false;
         String corner1 = w1.getUID() + sep + b1.getX() + sep + b1.getY() + sep + b1.getZ();
         String corner2 = w2.getUID() + sep + b2.getX() + sep + b2.getY() + sep + b2.getZ();
-        areas.set(area.getName() + ".1", corner1);
-        areas.set(area.getName() + ".2", corner2);
+        areas.set(areaBoundingBox.getName() + ".1", corner1);
+        areas.set(areaBoundingBox.getName() + ".2", corner2);
         areas.save(fileName);
         return true;
     }
 
-    public Area loadArea(String fileName, String areaName) throws IOException, InvalidConfigurationException {
+    public AreaBoundingBox loadArea(String fileName, String areaName) throws IOException, InvalidConfigurationException {
         YamlConfiguration areas = new YamlConfiguration();
         areas.load(fileName);
         if (!areas.contains(areaName)) return null;
@@ -42,14 +42,14 @@ public class AreaStorage {
         if (loc1 == null || loc2 == null) return null;
         String[] parts1 = loc1.split("\\$");
         String[] parts2 = loc1.split("\\$");
-        Area area;
+        AreaBoundingBox areaBoundingBox;
         try {
-            area = new Area(new Location(Bukkit.getWorld(UUID.fromString(parts1[0])), Double.parseDouble(parts1[1]), Double.parseDouble(parts1[2]), Double.parseDouble(parts1[3])),
+            areaBoundingBox = new AreaBoundingBox(new Location(Bukkit.getWorld(UUID.fromString(parts1[0])), Double.parseDouble(parts1[1]), Double.parseDouble(parts1[2]), Double.parseDouble(parts1[3])),
                     new Location(Bukkit.getWorld(UUID.fromString(parts2[0])), Double.parseDouble(parts2[1]), Double.parseDouble(parts2[2]), Double.parseDouble(parts2[3])),
                     areaName);
         } catch (NullPointerException | IllegalArgumentException e) {
             return null;
         }
-        return area;
+        return areaBoundingBox;
     }
 }
