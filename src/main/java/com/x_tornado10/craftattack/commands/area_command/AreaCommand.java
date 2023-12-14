@@ -1,11 +1,13 @@
-package com.x_tornado10.craftattack.commands.saveNew;
+package com.x_tornado10.craftattack.commands.area_command;
 
 import com.x_tornado10.craftattack.area.Area;
 import com.x_tornado10.craftattack.craftattack;
 import com.x_tornado10.craftattack.plmsg.PlayerMessages;
 import com.x_tornado10.craftattack.utils.id.Id;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -13,19 +15,16 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.logging.Logger;
 
-public class SaveNewCommand implements CommandExecutor {
+public class AreaCommand implements CommandExecutor {
 
-    private craftattack plugin;
-    private Logger logger;
-    private PlayerMessages plmsg;
+    private final craftattack plugin;
+    private final Logger logger;
+    private final PlayerMessages plmsg;
 
-    public SaveNewCommand() {
+    public AreaCommand() {
         plugin = craftattack.getInstance();
         logger = plugin.getLogger();
         plmsg = plugin.getPlmsg();
@@ -37,21 +36,88 @@ public class SaveNewCommand implements CommandExecutor {
             logger.info("This command is not yet supported for console!");
             return true;
         }
-        if (args.length != 7) {
-            plmsg.msg(p, "Please provide valid arguments!");
-            return true;
-        }
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                List<String> coords = new ArrayList<>(List.of(args));
-                coords.remove(args[0]);
-                craftattack.a = new Area(args[0], getArea(p,coords));
-                plmsg.msg(p,"DONE");
+        switch (args.length) {
+            case 5 -> {
+                if (!args[0].equalsIgnoreCase("load")) {
+                    plmsg.msg(p, "Please provide valid arguments!");
+                    return true;
+                }
+                Location loc;
+                try {
+                    List<String> temp = new ArrayList<>();
+                    temp.add(args[2]);
+                    temp.add(args[3]);
+                    temp.add(args[4]);
+                    temp.add("0");
+                    temp.add("0");
+                    temp.add("0");
+                    List<Location> locs = getCoordinates(p, temp);
+                    loc = locs.get(0);
+                } catch (NullPointerException | NumberFormatException e) {
+                    plmsg.msg(p, "Please provide valid arguments!");
+                    return true;
+                }
+                int indexOfArea = getIndexOfArea(args[1]);
+                if (indexOfArea == -1) {
+                    plmsg.msg(p, "Please provide valid arguments!");
+                    return true;
+                }
+                Area a = craftattack.areaList.get(indexOfArea);
+                World w = p.getWorld();
+                //new BukkitRunnable() {
+                    //@Override
+                    //public void run() {
+                        for (Map.Entry<Id, Block> e : a.getBlocks().entrySet()) {
+                            Id id = e.getKey();
+                            Location loc0 = getCoords(id, loc);
+                            BlockData bdata = e.getValue().getBlockData();
+                            //new BukkitRunnable() {
+                                //@Override
+                                //public void run() {
+                                    w.getBlockAt(loc0).setBlockData(bdata);
+                                //}
+                            //}.runTask(plugin);
+                        }
+                        plmsg.msg(p,"Successfully loaded " + a.getBlockCount() + " blocks!");
+                        //craftattack.areaList.remove(a);
+                    //}
+                //}.runTaskAsynchronously(plugin);
+                return true;
             }
-        }.runTaskAsynchronously(plugin);
+            case 8 -> {
+                if (!args[0].equalsIgnoreCase("read")) {
+                    plmsg.msg(p, "Please provide valid arguments!");
+                    return true;
+                }
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        List<String> coords = new ArrayList<>(List.of(args));
+                        coords.remove(args[0]);
+                        coords.remove(args[1]);
+                        craftattack.areaList.add(new Area(args[1], getArea(p,coords)));
+                        plmsg.msg(p,"DONE");
+                    }
+                }.runTaskAsynchronously(plugin);
+                return true;
+            }
+            default -> {
+                plmsg.msg(p, "Please provide valid arguments!");
+                return true;
+            }
 
-        return true;
+        }
+    }
+
+    private int getIndexOfArea(String arg) {
+        for (Area a : craftattack.areaList) {
+            if (a.getName().equals(arg)) return craftattack.areaList.indexOf(a);
+        }
+        return -1;
+    }
+
+    private Location getCoords(Id id, Location referencePoint) {
+        return new Location(null, referencePoint.getX() + id.getX(), referencePoint.getY() + id.getY(), referencePoint.getZ() + id.getZ());
     }
 
     private HashMap<Id, Block> getArea(Player p,  List<String> args) {

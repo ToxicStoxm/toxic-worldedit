@@ -7,7 +7,5 @@ authors: [x_Tornado10]
 commands:
   new:
     usage: /new <coordinates> <coordinates>
-  read:
-    usage: /new-area <name> <coordinates> <coordinates>
-  load:
-    usage: /load <coordinates>
+  area:
+    usage: /area <read/load> <name> <coordinates> <coordinates>
