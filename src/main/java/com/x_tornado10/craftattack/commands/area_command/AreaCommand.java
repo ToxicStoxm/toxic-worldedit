@@ -3,31 +3,41 @@ package com.x_tornado10.craftattack.commands.area_command;
 import com.x_tornado10.craftattack.area.Area;
 import com.x_tornado10.craftattack.craftattack;
 import com.x_tornado10.craftattack.plmsg.PlayerMessages;
+import com.x_tornado10.craftattack.utils.CustomBlock;
 import com.x_tornado10.craftattack.utils.id.Id;
+import com.x_tornado10.craftattack.utils.mgrs.SaveMgr;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.util.*;
 import java.util.logging.Logger;
 
-public class AreaCommand implements CommandExecutor {
+import static org.bukkit.Bukkit.getServer;
+
+public class AreaCommand implements CommandExecutor, Listener {
 
     private final craftattack plugin;
     private final Logger logger;
     private final PlayerMessages plmsg;
+    private HashMap<Location, BlockData> toDo;
+    private boolean loading = false;
+    private final SaveMgr saveMgr;
 
     public AreaCommand() {
         plugin = craftattack.getInstance();
         logger = plugin.getLogger();
         plmsg = plugin.getPlmsg();
+        saveMgr = plugin.getSaveMgr();
     }
 
     @Override
@@ -64,24 +74,19 @@ public class AreaCommand implements CommandExecutor {
                 }
                 Area a = craftattack.areaList.get(indexOfArea);
                 World w = p.getWorld();
-                //new BukkitRunnable() {
-                    //@Override
-                    //public void run() {
-                        for (Map.Entry<Id, Block> e : a.getBlocks().entrySet()) {
-                            Id id = e.getKey();
-                            Location loc0 = getCoords(id, loc);
-                            BlockData bdata = e.getValue().getBlockData();
-                            //new BukkitRunnable() {
-                                //@Override
-                                //public void run() {
-                                    w.getBlockAt(loc0).setBlockData(bdata);
-                                //}
-                            //}.runTask(plugin);
-                        }
-                        plmsg.msg(p,"Successfully loaded " + a.getBlockCount() + " blocks!");
-                        //craftattack.areaList.remove(a);
-                    //}
-                //}.runTaskAsynchronously(plugin);
+                toDo = new HashMap<>();
+                for (Map.Entry<Id, CustomBlock> e : a.getBlocks().entrySet()) {
+                    Id id = e.getKey();
+                    Location loc0 = getCoords(id, loc);
+                    BlockData bdata = e.getValue().getBlockData();
+                    toDo.put(loc0,bdata);
+                }
+                loading = true;
+                for (Map.Entry<Location, BlockData> entry : toDo.entrySet()) {
+                    w.getBlockAt(entry.getKey()).setBlockData(entry.getValue());
+                }
+                loading = false;
+                plmsg.msg(p, "Successfully loaded " + a.getBlockCount() + " blocks!");
                 return true;
             }
             case 8 -> {
@@ -95,8 +100,12 @@ public class AreaCommand implements CommandExecutor {
                         List<String> coords = new ArrayList<>(List.of(args));
                         coords.remove(args[0]);
                         coords.remove(args[1]);
-                        craftattack.areaList.add(new Area(args[1], getArea(p,coords)));
+                        Area a = new Area(args[1], getArea(p,coords));
+                        craftattack.areaList.remove(a);
+                        craftattack.areaList.add(a);
+                        a = null;
                         plmsg.msg(p,"DONE");
+                        preSave();
                     }
                 }.runTaskAsynchronously(plugin);
                 return true;
@@ -117,16 +126,16 @@ public class AreaCommand implements CommandExecutor {
     }
 
     private Location getCoords(Id id, Location referencePoint) {
-        return new Location(null, referencePoint.getX() + id.getX(), referencePoint.getY() + id.getY(), referencePoint.getZ() + id.getZ());
+        return new Location(null, referencePoint.getX() + id.x(), referencePoint.getY() + id.y(), referencePoint.getZ() + id.z());
     }
 
-    private HashMap<Id, Block> getArea(Player p,  List<String> args) {
+    private HashMap<Id, CustomBlock> getArea(Player p, List<String> args) {
         List<Location> locs = getCoordinates(p, args);
         Location corner1 = locs.get(0);
         Location corner2 = locs.get(1);
-        HashMap<Id, Block> result = new HashMap<>();
+        HashMap<Id, CustomBlock> result = new HashMap<>();
 
-        List<Block> blocks = new ArrayList<>();
+        List<CustomBlock> blocks = new ArrayList<>();
 
         int minX = Math.min(corner1.getBlockX(), corner2.getBlockX());
         int minY = Math.min(corner1.getBlockY(), corner2.getBlockY());
@@ -139,39 +148,41 @@ public class AreaCommand implements CommandExecutor {
         for (int x = minX; x <= maxX; x++) {
             for (int y = minY; y <= maxY; y++) {
                 for (int z = minZ; z <= maxZ; z++) {
-                    blocks.add(Objects.requireNonNull(corner1.getWorld()).getBlockAt(x,y,z));
+                    blocks.add(new CustomBlock(Objects.requireNonNull(corner1.getWorld()).getBlockAt(x, y, z)));
                 }
             }
         }
-        Block origin = blocks.get(0);
-        for (Block b : blocks) {
+        CustomBlock origin = new CustomBlock(p.getLocation().getBlock());
+        /*for (CustomBlock b : blocks) {
             if (nearOrigin(b,origin)) origin = b;
-        }
+        }*/
         result.put(new Id(0,0,0), origin);
         blocks.remove(origin);
-        for (Block b : blocks) {
+        for (CustomBlock b : blocks) {
             result.put(new Id(xDifToOrigin(b, origin), yDifToOrigin(b, origin), zDifToOrigin(b,origin)), b);
         }
         return result;
     }
 
-    private boolean nearOrigin(Block b1, Block b2) {
-        int x1 = b1.getX();
-        int y1 = b1.getY();
-        int z1 = b1.getZ();
-        int x2 = b2.getX();
-        int y2 = b2.getY();
-        int z2 = b2.getZ();
+    private boolean nearOrigin(CustomBlock b1, CustomBlock b2) {
+        Location loc1 = b1.getLocation();
+        Location loc2 = b2.getLocation();
+        int x1 = loc1.getBlockX();
+        int y1 = loc1.getBlockY();
+        int z1 = loc1.getBlockZ();
+        int x2 = loc2.getBlockX();
+        int y2 = loc2.getBlockY();
+        int z2 = loc2.getBlockZ();
         return x1 < x2 || y1 < y2 || z1 < z2;
     }
-    private int xDifToOrigin(Block b, Block origin) {
-        return b.getX() - origin.getX();
+    private int xDifToOrigin(CustomBlock b, CustomBlock origin) {
+        return b.getLocation().getBlockX() - origin.getLocation().getBlockX();
     }
-    private int yDifToOrigin(Block b, Block origin) {
-        return b.getY() - origin.getY();
+    private int yDifToOrigin(CustomBlock b, CustomBlock origin) {
+        return b.getLocation().getBlockY() - origin.getLocation().getBlockY();
     }
-    private int zDifToOrigin(Block b, Block origin) {
-        return b.getZ() - origin.getZ();
+    private int zDifToOrigin(CustomBlock b, CustomBlock origin) {
+        return b.getLocation().getBlockZ() - origin.getLocation().getBlockZ();
     }
 
     private List<Location> getCoordinates(Player p, List<String> args) {
@@ -211,5 +222,14 @@ public class AreaCommand implements CommandExecutor {
         locs.add(loc1);
         locs.add(loc2);
         return locs;
+    }
+    private void preSave() {
+        getServer().getScheduler().runTaskAsynchronously(plugin, saveMgr::save);
+    }
+    @EventHandler
+    public void onBlockBreak(BlockBreakEvent e) {
+        if (toDo.containsValue(e.getBlock().getBlockData()) && loading) {
+            e.setCancelled(true);
+        }
     }
 }

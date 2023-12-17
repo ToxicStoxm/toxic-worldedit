@@ -1,24 +1,20 @@
 package com.x_tornado10.craftattack.utils.id;
 
-public class Id {
-    private int x;
-    private int y;
-    private int z;
-    public Id(int x, int y, int z) {
-        this.x = x;
-        this.y = y;
-        this.z = z;
-    }
+import org.bukkit.configuration.serialization.ConfigurationSerializable;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
-    public int getX() {
-        return x;
-    }
+import java.util.HashMap;
+import java.util.Map;
 
-    public int getY() {
-        return y;
-    }
+public record Id(int x, int y, int z) implements ConfigurationSerializable {
 
-    public int getZ() {
-        return z;
+    @Override
+    @NonNull
+    public Map<String, Object> serialize() {
+        Map<String, Object> data = new HashMap<>();
+        data.put("x", x);
+        data.put("y", y);
+        data.put("z", z);
+        return data;
     }
 }
